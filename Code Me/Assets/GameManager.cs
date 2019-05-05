@@ -31,9 +31,11 @@ public class GameManager : MonoBehaviour
 
     #region Private Variables
     private Vector3Int _playerLocation;
+    private GameObject particle;
     private Dir startingDir;
     private bool running = false;
     private GameObject player;
+    public GameObject finish;
     private Animator playerAnim;
     private List<GameObject> trashList = new List<GameObject>();
     private bool isDisplayed = false;
@@ -47,6 +49,7 @@ public class GameManager : MonoBehaviour
         Vector3 cellPosition = grid.CellToWorld(_playerLocation);
         cellPosition.y += grid.cellSize.y / 2f;
         player = Instantiate(boat, cellPosition, Quaternion.identity);
+        particle = player.transform.GetChild(0).GetChild(4).gameObject;
         playerAnim = player.transform.GetChild(0).GetComponent<Animator>();
 
         north = player.transform.GetChild(0).GetChild(0).gameObject;
@@ -57,7 +60,7 @@ public class GameManager : MonoBehaviour
 
         cellPosition = grid.CellToWorld(endLocation);
         cellPosition.y += grid.cellSize.y / 2f;
-        end = Instantiate(end, cellPosition, Quaternion.identity);
+        finish = Instantiate(end, cellPosition, Quaternion.identity);
 
         for (int i = 0; i < trashLocations.Count; i++)
         {
@@ -130,14 +133,26 @@ public class GameManager : MonoBehaviour
             {
                 TurnRight();
             }
+            else if (function == "Clean();")
+            {
+                Clean();
+            }
 
             if (_playerLocation == endLocation)
             {
                 if (trashTotal == 0)
                 {
+                    yield return new WaitForSeconds(delay);
+                    particle.SetActive(true);
                     StartCoroutine(Wait(2f));
                     yield break;
                 }
+
+                yield return new WaitForSeconds(delay);
+
+                Reset();
+                running = false;
+                yield break;
             }
 
             yield return new WaitForSeconds(delay);
@@ -163,6 +178,7 @@ public class GameManager : MonoBehaviour
         Vector3 cellPosition = grid.CellToWorld(_playerLocation);
         cellPosition.y += grid.cellSize.y / 2f;
         player = Instantiate(boat, cellPosition, Quaternion.identity);
+        particle = player.transform.GetChild(0).GetChild(4).gameObject;
         playerAnim = player.transform.GetChild(0).GetComponent<Animator>();
 
         north = player.transform.GetChild(0).GetChild(0).gameObject;
@@ -170,6 +186,26 @@ public class GameManager : MonoBehaviour
         west = player.transform.GetChild(0).GetChild(2).gameObject;
         east = player.transform.GetChild(0).GetChild(3).gameObject;
         changeDir();
+
+        Destroy(finish);
+        cellPosition = grid.CellToWorld(endLocation);
+        cellPosition.y += grid.cellSize.y / 2f;
+        finish = Instantiate(end, cellPosition, Quaternion.identity);
+
+        foreach (GameObject obj in trashList)
+        {
+            Destroy(obj);
+        }
+
+        trashList = new List<GameObject>();
+
+        for (int i = 0; i < trashLocations.Count; i++)
+        {
+            cellPosition = grid.CellToWorld(trashLocations[i]);
+            cellPosition.y += grid.cellSize.y / 2f;
+            trashList.Add(Instantiate(trash, cellPosition, Quaternion.identity));
+        }
+        trashTotal = trashLocations.Count;
     }
 
     public void Display()
@@ -278,6 +314,77 @@ public class GameManager : MonoBehaviour
         }
 
         changeDir();
+    }
+
+    private void Clean()
+    {
+        switch (direction)
+        {
+            case Dir.north:
+                for (int i = 0; i < trashLocations.Count; i++)
+                {
+                    Vector3Int temp = _playerLocation;
+                    temp.y++;
+                    if (temp == trashLocations[i] && trashList[i] != null)
+                    {
+                        StartCoroutine(Laser(trashList[i], player.transform.GetChild(0).GetChild(0).GetChild(0).gameObject));
+                        trashTotal--;
+                    }
+                }
+                break;
+
+            case Dir.south:
+                for (int i = 0; i < trashLocations.Count; i++)
+                {
+                    Vector3Int temp = _playerLocation;
+                    temp.y--;
+                    if (temp == trashLocations[i] && trashList[i] != null)
+                    {
+
+                        StartCoroutine(Laser(trashList[i], player.transform.GetChild(0).GetChild(1).GetChild(0).gameObject));
+                        trashTotal--;
+                    }
+                }
+                break;
+
+            case Dir.west:
+                for (int i = 0; i < trashLocations.Count; i++)
+                {
+                    Vector3Int temp = _playerLocation;
+                    temp.x--;
+                    if (temp == trashLocations[i] && trashList[i] != null)
+                    {
+                        StartCoroutine(Laser(trashList[i], player.transform.GetChild(0).GetChild(2).GetChild(0).gameObject));
+                        trashTotal--;
+                    }
+                }
+                break;
+
+            case Dir.east:
+                for (int i = 0; i < trashLocations.Count; i++)
+                {
+                    Vector3Int temp = _playerLocation;
+                    temp.x++;
+                    if (temp == trashLocations[i] && trashList[i] != null)
+                    {
+                        StartCoroutine(Laser(trashList[i], player.transform.GetChild(0).GetChild(3).GetChild(0).gameObject));
+                        trashTotal--;
+                    }
+                }
+                break;
+        }
+
+        changeDir();
+    }
+
+    IEnumerator Laser(GameObject trashObj, GameObject beam)
+    {
+        beam.SetActive(true);
+
+        yield return new WaitForSeconds(.3f);
+
+        beam.SetActive(false);
+        Destroy(trashObj);
     }
     #endregion
 }
