@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -9,7 +10,7 @@ public class GameManager : MonoBehaviour
 
     #region Public Variables
     public GridLayout grid;
-    public GameObject player;
+    public GameObject boat;
     public GameObject north;
     public GameObject south;
     public GameObject west;
@@ -17,17 +18,26 @@ public class GameManager : MonoBehaviour
     public Dir direction;
     public Vector3Int spawnLocation;
     public Vector3Int endLocation;
+    public GameObject end;
     public Vector2Int bottomLeft;
     public Vector2Int topRight;
     public List<Vector3Int> trashLocations;
+    public GameObject trash;
     public GameObject functionGenerator;
     public float delay;
+    public GameObject display;
+    public string scene;
     #endregion
 
     #region Private Variables
     private Vector3Int _playerLocation;
     private Dir startingDir;
     private bool running = false;
+    private GameObject player;
+    private Animator playerAnim;
+    private List<GameObject> trashList = new List<GameObject>();
+    private bool isDisplayed = false;
+    private int trashTotal;
     #endregion
 
     void Start()
@@ -36,13 +46,26 @@ public class GameManager : MonoBehaviour
         _playerLocation = spawnLocation;
         Vector3 cellPosition = grid.CellToWorld(_playerLocation);
         cellPosition.y += grid.cellSize.y / 2f;
-        player = Instantiate(player, cellPosition, Quaternion.identity);
+        player = Instantiate(boat, cellPosition, Quaternion.identity);
+        playerAnim = player.transform.GetChild(0).GetComponent<Animator>();
 
-        north = player.transform.GetChild(0).gameObject;
-        south = player.transform.GetChild(1).gameObject;
-        west = player.transform.GetChild(2).gameObject;
-        east = player.transform.GetChild(3).gameObject;
+        north = player.transform.GetChild(0).GetChild(0).gameObject;
+        south = player.transform.GetChild(0).GetChild(1).gameObject;
+        west = player.transform.GetChild(0).GetChild(2).gameObject;
+        east = player.transform.GetChild(0).GetChild(3).gameObject;
         changeDir();
+
+        cellPosition = grid.CellToWorld(endLocation);
+        cellPosition.y += grid.cellSize.y / 2f;
+        end = Instantiate(end, cellPosition, Quaternion.identity);
+
+        for (int i = 0; i < trashLocations.Count; i++)
+        {
+            cellPosition = grid.CellToWorld(trashLocations[i]);
+            cellPosition.y += grid.cellSize.y / 2f;
+            trashList.Add(Instantiate(trash, cellPosition, Quaternion.identity));
+        }
+        trashTotal = trashLocations.Count;
     }
 
     private void changeDir()
@@ -96,6 +119,7 @@ public class GameManager : MonoBehaviour
 
             if (function == "Move();")
             {
+                playerAnim.Play("Move");
                 Move();
             }
             else if (function == "TurnLeft();")
@@ -107,12 +131,28 @@ public class GameManager : MonoBehaviour
                 TurnRight();
             }
 
+            if (_playerLocation == endLocation)
+            {
+                if (trashTotal == 0)
+                {
+                    StartCoroutine(Wait(2f));
+                    yield break;
+                }
+            }
+
             yield return new WaitForSeconds(delay);
         }
 
         Reset();
 
         running = false;
+    }
+
+    IEnumerator Wait(float waitTime)
+    {
+        yield return new WaitForSeconds(waitTime);
+
+        SceneManager.LoadScene(scene);
     }
 
     private void Reset()
@@ -122,16 +162,45 @@ public class GameManager : MonoBehaviour
         _playerLocation = spawnLocation;
         Vector3 cellPosition = grid.CellToWorld(_playerLocation);
         cellPosition.y += grid.cellSize.y / 2f;
-        player = Instantiate(player, cellPosition, Quaternion.identity);
+        player = Instantiate(boat, cellPosition, Quaternion.identity);
+        playerAnim = player.transform.GetChild(0).GetComponent<Animator>();
 
-        north = player.transform.GetChild(0).gameObject;
-        south = player.transform.GetChild(1).gameObject;
-        west = player.transform.GetChild(2).gameObject;
-        east = player.transform.GetChild(3).gameObject;
+        north = player.transform.GetChild(0).GetChild(0).gameObject;
+        south = player.transform.GetChild(0).GetChild(1).gameObject;
+        west = player.transform.GetChild(0).GetChild(2).gameObject;
+        east = player.transform.GetChild(0).GetChild(3).gameObject;
         changeDir();
     }
 
+    public void Display()
+    {
+        if (isDisplayed)
+        {
+            display.SetActive(false);
+            isDisplayed = false;
+        }
+        else
+        {
+            display.SetActive(true);
+            isDisplayed = true;
+        }
+    }
+
     #region Functions
+    IEnumerator MoveFromTo(Transform objectToMove, Vector3 a, Vector3 b, float speed)
+    {
+        float step = (speed / (a - b).magnitude) * Time.fixedDeltaTime;
+        float t = 0;
+        while (t <= 1.0f)
+        {
+            t += step; // Goes from 0 to 1, incrementing by step each time
+            objectToMove.position = Vector3.Lerp(a, b, t); // Move objectToMove closer to b
+            yield return new WaitForFixedUpdate();         // Leave the routine and return here in the next frame
+        }
+        objectToMove.position = b;
+        playerAnim.Play("Idle");
+    }
+
     private void Move()
     {
         Vector3Int temp = _playerLocation;
@@ -158,7 +227,8 @@ public class GameManager : MonoBehaviour
             _playerLocation = temp;
             Vector3 cellPosition = grid.CellToWorld(_playerLocation);
             cellPosition.y += grid.cellSize.y / 2f;
-            player.transform.position = cellPosition;
+            //player.transform.position = cellPosition;
+            StartCoroutine(MoveFromTo(player.transform, player.transform.position, cellPosition, 2f));
         }
     }
 
