@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.Text.RegularExpressions;
+using System;
 
 public class GameManager : MonoBehaviour
 {
@@ -71,6 +73,14 @@ public class GameManager : MonoBehaviour
         trashTotal = trashLocations.Count;
     }
 
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            SceneManager.LoadScene("Level1");
+        }
+    }
+
     private void changeDir()
     {
         switch (direction)
@@ -116,9 +126,16 @@ public class GameManager : MonoBehaviour
 
     IEnumerator WaitWhileRunning()
     {
+        bool forlooped = false;
         for (int i = 0; i < functionGenerator.transform.childCount; i++)
         {
             string function = functionGenerator.transform.GetChild(i).GetChild(0).GetComponent<Text>().text;
+
+            if (forlooped)
+            {
+                forlooped = false;
+                continue;
+            }
 
             if (function == "Move();")
             {
@@ -136,6 +153,37 @@ public class GameManager : MonoBehaviour
             else if (function == "Clean();")
             {
                 Clean();
+            }
+            else
+            {
+                int val = Convert.ToInt32(Regex.Match(function, @"(?<=\().+?(?=\))").Value);
+                Debug.Log(val);
+                if (i + 1 < functionGenerator.transform.childCount)
+                {
+                    function = functionGenerator.transform.GetChild(i + 1).GetChild(0).GetComponent<Text>().text;
+                    for (int j = 0; j < val; j++)
+                    {
+                        if (function == "Move();")
+                        {
+                            playerAnim.Play("Move");
+                            Move();
+                        }
+                        else if (function == "TurnLeft();")
+                        {
+                            TurnLeft();
+                        }
+                        else if (function == "TurnRight();")
+                        {
+                            TurnRight();
+                        }
+                        else if (function == "Clean();")
+                        {
+                            Clean();
+                        }
+                        yield return new WaitForSeconds(delay);
+                    }
+                    forlooped = true;
+                }
             }
 
             if (_playerLocation == endLocation)

@@ -20,5 +20,10 @@ public class Click : MonoBehaviour
             start.SetActive(false);
             hud.SetActive(true);
         }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
     }
 }
