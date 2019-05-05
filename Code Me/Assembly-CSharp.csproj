@@ -62,6 +62,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Draggable.cs" />
+    <Compile Include="Assets\DropZone.cs" />
     <Compile Include="Assets\GameManager.cs" />
     <Reference Include="Unity.Timeline.Editor">
       <HintPath>C:/Users/whatb/Documents/Codefest2019/Codefest2019-Project/Code Me/Library/ScriptAssemblies/Unity.Timeline.Editor.dll</HintPath>
